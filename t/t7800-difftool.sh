@@ -646,6 +646,28 @@ test_expect_success SYMLINKS 'difftool --dir-diff --symlinks without unstaged ch
 	test_cmp expect actual
 '
 
+test_expect_success SYMLINKS_WINDOWS 'difftool --dir-diff --symlinks honors core.symlinks on Windows' '
+	# Regression test for 8241ae63d8 (difftool: eliminate use of global
+	# variables): difftool started consuming core.symlinks into its own
+	# state and returning early, so the global has_symlinks that the
+	# Windows symlink() emulation gates on was left unset. dir-diff then
+	# asked mingw_create_symlink() to create links it refused with ENOSYS
+	# ("Function not implemented"). Clearing MSYS zeroes has_symlinks at
+	# startup so that only core.symlinks can re-enable it, which is the
+	# very propagation the regression severed.
+	cat >expect <<-EOF &&
+	file
+	$PWD/file
+	file2
+	$PWD/file2
+	sub/sub
+	$PWD/sub/sub
+	EOF
+	MSYS= git -c core.symlinks=true difftool --dir-diff --symlinks \
+		--extcmd "./.git/CHECK_SYMLINKS" branch HEAD &&
+	test_cmp expect actual
+'
+
 write_script modify-right-file <<\EOF
 echo "modified content" >"$2/file"
 EOF

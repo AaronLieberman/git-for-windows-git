@@ -54,10 +54,17 @@ static int difftool_config(const char *var, const char *value,
 		dt_options->trust_exit_code = git_config_bool(var, value);
 		return 0;
 	}
-	if (!strcmp(var, "core.symlinks")) {
+	if (!strcmp(var, "core.symlinks"))
+		/*
+		 * Record the value for dir-diff's own use, but do not return
+		 * here: fall through so that git_default_config() also updates
+		 * the global `has_symlinks`. Platforms whose symlink() compat
+		 * layer gates on that global (notably Windows, whose
+		 * mingw_create_symlink() returns ENOSYS when has_symlinks is
+		 * unset) would otherwise be asked to create dir-diff symlinks
+		 * that the compat layer then refuses.
+		 */
 		dt_options->has_symlinks = git_config_bool(var, value);
-		return 0;
-	}
 
 	return git_default_config(var, value, ctx, cb);
 }
